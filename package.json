@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
     "color-namer": "^1.4.0",
+    "posthog-js": "^1.257.0",
     "randomcolor": "^0.6.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
