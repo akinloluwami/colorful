@@ -92,12 +92,12 @@ export default function App() {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(current.hex);
-    // Track copied colors in localStorage
+
     const copiedColorsRaw = localStorage.getItem("copiedColors");
     let copiedColors: ColorInfo[] = copiedColorsRaw
       ? JSON.parse(copiedColorsRaw)
       : [];
-    // Avoid duplicates by hex
+
     if (!copiedColors.some((c) => c.hex === current.hex)) {
       copiedColors.push(current);
       localStorage.setItem("copiedColors", JSON.stringify(copiedColors));
@@ -119,18 +119,14 @@ export default function App() {
       onDoubleClick={prev}
     >
       <h1
-        className="text-center font-bold mb-2"
+        className="text-center font-bold mb-2 text-6xl lg:text-8xl"
         style={{
           color: textColor,
-          fontSize: `clamp(2rem, ${Math.max(
-            8 - (current?.name?.length || 0) * 0.2,
-            3
-          )}rem, 8rem)`,
         }}
       >
         {current?.name}
       </h1>
-      {/* Wrap the button and copied text in a relative container */}
+
       <div className="relative flex flex-col items-center w-full">
         {copied && (
           <div
@@ -149,7 +145,7 @@ export default function App() {
             e.stopPropagation();
             copyToClipboard();
           }}
-          className="text-5xl underline mt-5 font-extralight cursor-pointer"
+          className="text-3xl lg:text-5xl underline mt-5 font-extralight cursor-pointer"
           style={{ color: textColor }}
         >
           {current?.hex}
