@@ -17,7 +17,7 @@ function getTextColor(bg: string) {
 }
 
 function generateColor(): ColorInfo {
-  const hex = randomColor();
+  const hex = randomColor({ hue: "random", luminosity: "random" });
   const name = namer(hex).ntc[0].name;
   return { hex, name };
 }
