@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import randomColor from "randomcolor";
 import namer from "color-namer";
+import posthog from "posthog-js";
 
 type ColorInfo = {
   hex: string;
@@ -50,6 +51,10 @@ export default function App() {
     const initial = generateColor();
     setColors([initial]);
     setIndex(0);
+    posthog.capture("page_load", {
+      hex: initial.hex,
+      name: initial.name,
+    });
   }, []);
 
   const current = colors[index];
@@ -67,10 +72,22 @@ export default function App() {
     setColors(updated);
     setIndex((i) => i + 1);
     localStorage.setItem("viewedColors", JSON.stringify(updated));
+    posthog.capture("next_color", {
+      hex: newColor.hex,
+      name: newColor.name,
+      index: index + 1,
+    });
   };
 
   const prev = () => {
     if (index > 0) setIndex((i) => i - 1);
+    if (index > 0) {
+      posthog.capture("prev_color", {
+        hex: colors[index - 1]?.hex,
+        name: colors[index - 1]?.name,
+        index: index - 1,
+      });
+    }
   };
 
   const copyToClipboard = () => {
@@ -87,6 +104,11 @@ export default function App() {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
+    posthog.capture("color_copied", {
+      hex: current.hex,
+      name: current.name,
+      index,
+    });
   };
 
   return (
