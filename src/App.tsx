@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent } from "react";
 import randomColor from "randomcolor";
 import namer from "color-namer";
 import posthog from "posthog-js";
@@ -6,6 +7,11 @@ import posthog from "posthog-js";
 type ColorInfo = {
   hex: string;
   name: string;
+};
+
+type Point = {
+  x: number;
+  y: number;
 };
 
 function getTextColor(bg: string) {
@@ -17,7 +23,7 @@ function getTextColor(bg: string) {
 }
 
 function generateColor(): ColorInfo {
-  const hex = randomColor({ hue: "random", luminosity: "random" });
+  const hex = randomColor({ hue: "random", luminosity: "bright" });
   const name = namer(hex).ntc[0].name;
   return { hex, name };
 }
@@ -46,6 +52,9 @@ export default function App() {
   const [colors, setColors] = useState<ColorInfo[]>([]);
   const [index, setIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
+  const pointerStart = useRef<Point | null>(null);
+  const ignoreNextClick = useRef(false);
 
   useEffect(() => {
     const initial = generateColor();
@@ -64,6 +73,18 @@ export default function App() {
     if (current?.hex) {
       setFaviconColor(current.hex);
     }
+  }, [current]);
+
+  useEffect(() => {
+    setShowDownload(false);
+
+    if (!current?.hex) return;
+
+    const timeout = window.setTimeout(() => {
+      setShowDownload(true);
+    }, 2000);
+
+    return () => window.clearTimeout(timeout);
   }, [current]);
 
   const next = () => {
@@ -111,12 +132,75 @@ export default function App() {
     });
   };
 
+  const downloadColor = () => {
+    if (!current) return;
+
+    const size = 1024;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.fillStyle = current.hex;
+    ctx.fillRect(0, 0, size, size);
+
+    const link = document.createElement("a");
+    const filenameName = current.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    link.download = `${filenameName}-${current.hex.slice(1)}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+
+    posthog.capture("color_downloaded", {
+      hex: current.hex,
+      name: current.name,
+      index,
+    });
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    pointerStart.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!pointerStart.current) return;
+
+    const deltaX = event.clientX - pointerStart.current.x;
+    const deltaY = event.clientY - pointerStart.current.y;
+    pointerStart.current = null;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+    ignoreNextClick.current = true;
+
+    if (deltaX < 0) {
+      next();
+    } else {
+      prev();
+    }
+  };
+
+  const handleClick = () => {
+    if (ignoreNextClick.current) {
+      ignoreNextClick.current = false;
+      return;
+    }
+
+    next();
+  };
+
   return (
     <div
-      className="w-full h-screen flex flex-col items-center justify-center transition-all duration-500 p-5"
+      className="w-full h-screen flex flex-col items-center justify-center transition-all duration-500 p-5 touch-pan-y"
       style={{ backgroundColor: current?.hex }}
-      onClick={next}
+      onClick={handleClick}
       onDoubleClick={prev}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
     >
       <h1
         className="text-center font-bold mb-2 text-6xl lg:text-8xl"
@@ -151,6 +235,22 @@ export default function App() {
           {current?.hex}
         </button>
       </div>
+
+      {showDownload && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            downloadColor();
+          }}
+          className="fixed bottom-5 right-5 rounded-md border px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
+          style={{
+            borderColor: textColor,
+            color: textColor,
+          }}
+        >
+          Download
+        </button>
+      )}
     </div>
   );
 }
